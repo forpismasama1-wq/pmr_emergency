@@ -1,0 +1,40 @@
+name: Build PMR Emergency APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'pmr_emergency_flutter_terhubung.zip'
+      - '.github/workflows/build-android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract project
+        run: |
+          unzip pmr_emergency_flutter_terhubung.zip -d source
+          cd source/pmr_emergency_flutter
+          echo "PROJECT_DIR=$PWD" >> $GITHUB_ENV
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Prepare Android
+        run: |
+          cd "$PROJECT_DIR"
+          flutter create --platforms=android --project-name pmr_emergency .
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PMR-EMERGENCY-APK
+          path: source/pmr_emergency_flutter/build/app/outputs/flutter-apk/app-release.apk
