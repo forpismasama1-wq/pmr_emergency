@@ -1,0 +1,45 @@
+name: Build PMR Emergency APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'pmr_emergency_flutter_terhubung.zip'
+      - '.github/workflows/build-android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract project
+        run: |
+          unzip pmr_emergency_flutter_terhubung.zip -d source
+          cd source/pmr_emergency_flutter
+          echo "PROJECT_DIR=$PWD" >> $GITHUB_ENV
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          flutter create --platforms=android --project-name pmr_emergency .
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          permission = '    <uses-permission android:name="android.permission.INTERNET"/>\n'
+          if "android.permission.INTERNET" not in s:
+              s = s.replace("<application", permission + "    <application", 1)
+              p.write_text(s)
+          PY
+          flutter pub get
+          flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PMR-EMERGENCY-APK
+          path: source/pmr_emergency_flutter/build/app/outputs/flutter-apk/app-release.apk
